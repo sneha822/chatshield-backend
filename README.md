@@ -5,6 +5,7 @@ A real-time chat application backend built with FastAPI and WebSocket support.
 ## Features
 
 - ⚡ **Real-time messaging** with WebSocket
+- 🛡️ **Toxicity Detection** - NLP-powered message analysis
 - 🏠 **Room-based chat** - Join different chat rooms
 - 📡 **REST API** - Health checks and room management
 - 🔒 **CORS enabled** - Secure cross-origin requests
@@ -25,6 +26,9 @@ chatshield-backend/
 │   │   ├── __init__.py
 │   │   ├── health.py     # Health check endpoints
 │   │   └── chat.py       # Chat REST endpoints
+│   ├── services/
+│   │   ├── __init__.py
+│   │   └── toxicity.py   # Toxicity detection NLP service
 │   └── websocket/
 │       ├── __init__.py
 │       ├── manager.py    # WebSocket connection manager
@@ -40,8 +44,9 @@ chatshield-backend/
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.10 or higher
 - pip (Python package manager)
+- ~2GB disk space (for the toxicity detection model)
 
 ### Installation
 
@@ -144,7 +149,17 @@ ws.onmessage = (event) => {
     //     content: "Hello, World!",
     //     sender: "Username",
     //     timestamp: "2024-01-01T12:00:00",
-    //     room_id: "general"
+    //     room_id: "general",
+    //     toxicity: {
+    //         toxicity: 0.0012,
+    //         severe_toxicity: 0.0001,
+    //         obscene: 0.0005,
+    //         threat: 0.0002,
+    //         insult: 0.0008,
+    //         identity_attack: 0.0003,
+    //         is_toxic: false,
+    //         toxicity_level: "safe"
+    //     }
     // }
 };
 ```
@@ -156,6 +171,50 @@ ws.onmessage = (event) => {
 - `join` - User joined the room
 - `leave` - User left the room
 - `error` - Error message
+
+## Toxicity Detection
+
+Every message is automatically analyzed for toxicity using the [Detoxify](https://github.com/unitaryai/detoxify) NLP model. The toxicity scores are included in the message response.
+
+### Toxicity Scores
+
+| Score | Description |
+|-------|-------------|
+| `toxicity` | Overall toxicity score (0.0 - 1.0) |
+| `severe_toxicity` | Severe/extreme toxicity |
+| `obscene` | Obscene language |
+| `threat` | Threatening language |
+| `insult` | Insulting language |
+| `identity_attack` | Identity-based attacks |
+| `is_toxic` | Boolean flag (true if toxicity > 0.5) |
+| `toxicity_level` | Human-readable level |
+
+### Toxicity Levels
+
+| Level | Score Range |
+|-------|-------------|
+| `safe` | 0.0 - 0.2 |
+| `mild` | 0.2 - 0.4 |
+| `moderate` | 0.4 - 0.6 |
+| `high` | 0.6 - 0.8 |
+| `severe` | 0.8 - 1.0 |
+
+### Frontend Usage Example
+
+```javascript
+ws.onmessage = (event) => {
+    const message = JSON.parse(event.data);
+    
+    // Check toxicity
+    if (message.toxicity?.is_toxic) {
+        console.warn('Toxic message detected!', message.toxicity.toxicity_level);
+        // Handle toxic message (blur, warn, etc.)
+    }
+    
+    // Display message with toxicity indicator
+    displayMessage(message);
+};
+```
 
 ## Environment Variables
 

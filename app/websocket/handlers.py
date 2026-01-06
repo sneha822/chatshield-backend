@@ -7,6 +7,7 @@ import logging
 
 from .manager import manager
 from ..models import Message, MessageType
+from ..services import toxicity_analyzer
 
 logger = logging.getLogger(__name__)
 
@@ -41,33 +42,30 @@ async def websocket_endpoint(websocket: WebSocket, username: str, room_id: str =
             
             try:
                 message_data = json.loads(data)
-                
-                # Validate and create message
-                message = Message(
-                    type=MessageType.CHAT,
-                    content=message_data.get("content", ""),
-                    sender=username,
-                    room_id=room_id
-                )
-                
-                # Broadcast to room
-                await manager.broadcast_to_room(
-                    message.model_dump(mode="json"),
-                    room_id
-                )
+                content = message_data.get("content", "")
                 
             except json.JSONDecodeError:
                 # Handle plain text messages
+                content = data
+            
+            try:
+                # Analyze message for toxicity
+                toxicity_scores = toxicity_analyzer.analyze(content)
+                
+                # Create message with toxicity data
                 message = Message(
                     type=MessageType.CHAT,
-                    content=data,
+                    content=content,
                     sender=username,
                     room_id=room_id
                 )
-                await manager.broadcast_to_room(
-                    message.model_dump(mode="json"),
-                    room_id
-                )
+                
+                # Build response with toxicity analysis
+                message_response = message.model_dump(mode="json")
+                message_response["toxicity"] = toxicity_scores
+                
+                # Broadcast to room with toxicity scores
+                await manager.broadcast_to_room(message_response, room_id)
                 
             except Exception as e:
                 logger.error(f"Error processing message: {e}")

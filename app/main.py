@@ -11,6 +11,7 @@ import logging
 from .config import settings
 from .routes import health_router, chat_router
 from .websocket import websocket_endpoint
+from .services import toxicity_analyzer
 
 # Configure logging
 logging.basicConfig(
@@ -31,7 +32,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,6 +41,14 @@ app.add_middleware(
 # Include REST API routers
 app.include_router(health_router)
 app.include_router(chat_router)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on application startup."""
+    logger.info("Initializing toxicity detection model...")
+    toxicity_analyzer.load_model()
+    logger.info("Application startup complete")
 
 
 @app.get("/")
