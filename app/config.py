@@ -1,28 +1,26 @@
-"""Application configuration settings."""
+"""Application configuration."""
 
 import os
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
+from pydantic_settings import BaseSettings
 
 
-class Settings:
-    """Application settings loaded from environment variables."""
+class Settings(BaseSettings):
+    """App settings."""
     
-    APP_NAME: str = os.getenv("APP_NAME", "ChatShield")
-    APP_VERSION: str = os.getenv("APP_VERSION", "1.0.0")
-    DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
+    APP_NAME: str = "ChatShield"
+    APP_VERSION: str = "1.0.0"
+    DEBUG: bool = True
     
-    # Server settings
-    HOST: str = os.getenv("HOST", "0.0.0.0")
-    PORT: int = int(os.getenv("PORT", "8000"))
+    HOST: str = "localhost"
+    PORT: int = 8000
     
-    # CORS settings
-    ALLOWED_ORIGINS: list = os.getenv(
-        "ALLOWED_ORIGINS", 
-        "http://localhost:3000,http://127.0.0.1:3000"
-    ).split(",")
+    # Auth
+    SECRET_KEY: str = "super-secret-key-change-this-in-prod"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    class Config:
+        env_file = ".env"
 
 
 settings = Settings()

@@ -8,19 +8,26 @@ import logging
 from .manager import manager
 from ..models import Message, MessageType
 from ..services import toxicity_analyzer
+from ..services.chat import chat_service
+from ..core.deps import get_ws_user
+
+
 
 logger = logging.getLogger(__name__)
 
 
-async def websocket_endpoint(websocket: WebSocket, username: str, room_id: str = "general"):
+async def websocket_endpoint(websocket: WebSocket, token: str, room_id: str = "general"):
     """
     Main WebSocket endpoint handler.
-    
-    Args:
-        websocket: The WebSocket connection
-        username: The username of the connecting client
-        room_id: The room to join
     """
+    # Authenticate
+    user = await get_ws_user(token)
+    if not user:
+        await websocket.close(code=4003, reason="Unauthorized")
+        return
+
+    username = user.username
+
     # Connect the user
     await manager.connect(websocket, username, room_id)
     
@@ -59,6 +66,15 @@ async def websocket_endpoint(websocket: WebSocket, username: str, room_id: str =
                     sender=username,
                     room_id=room_id
                 )
+                
+                # Save to database
+                await chat_service.save_message(
+                    content=content,
+                    username=username,
+                    room_id=room_id,
+                    toxicity_scores=toxicity_scores
+                )
+
                 
                 # Build response with toxicity analysis
                 message_response = message.model_dump(mode="json")

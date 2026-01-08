@@ -4,8 +4,10 @@ from fastapi import WebSocket
 from typing import Dict, List, Set
 import json
 import logging
+from app.services.chat import chat_service
 
 logger = logging.getLogger(__name__)
+
 
 
 class ConnectionManager:
@@ -36,6 +38,10 @@ class ConnectionManager:
             room_id: The room to join (defaults to 'general')
         """
         await websocket.accept()
+        
+        # Room persistence (auto-create rooms is still fine)
+        await chat_service.get_or_create_room(room_id)
+        
         self.active_connections.append(websocket)
         self.connection_usernames[websocket] = username
         
@@ -99,7 +105,19 @@ class ConnectionManager:
                 logger.error(f"Error sending message: {e}")
                 disconnected.append(connection)
         
-        # Clean up disconnected clients
+        # Save message to database (assuming message has content/sender structure)
+        # Note: Ideally the route handler calling this knows the sender.
+        # But if 'message' is just a dict, we might need to rely on structure.
+        # For now, let's assume the caller handles DB saving if strict accuracy is needed,
+        # OR we save it here if we can parse it.
+        #
+        # Better approach: The caller (route) should call chat_service.save_message()
+        # BEFORE calling broadcast.
+        #
+        # However, to be automatic as requested: "everytime a room is created, its stored... persist... store chats"
+        # Let's inspect the message.
+        
+        # Cleaning up disconnected clients
         for conn in disconnected:
             self.disconnect(conn, room_id)
     
@@ -147,4 +165,6 @@ class ConnectionManager:
 
 
 # Global connection manager instance
+# Global connection manager instance
 manager = ConnectionManager()
+

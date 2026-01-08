@@ -9,9 +9,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from .config import settings
-from .routes import health_router, chat_router
+from .routes import health_router, chat_router, auth
+from .routes.analytics import router as analytics_router
+
 from .websocket import websocket_endpoint
 from .services import toxicity_analyzer
+from .database import init_db
 
 # Configure logging
 logging.basicConfig(
@@ -41,6 +44,8 @@ app.add_middleware(
 # Include REST API routers
 app.include_router(health_router)
 app.include_router(chat_router)
+app.include_router(analytics_router)
+app.include_router(auth.router)
 
 
 @app.on_event("startup")
@@ -48,6 +53,7 @@ async def startup_event():
     """Initialize services on application startup."""
     logger.info("Initializing toxicity detection model...")
     toxicity_analyzer.load_model()
+    await init_db()
     logger.info("Application startup complete")
 
 
@@ -62,30 +68,18 @@ async def root():
     }
 
 
-@app.websocket("/ws/{username}")
-async def websocket_route(websocket: WebSocket, username: str, room: str = "general"):
+@app.websocket("/ws")
+async def websocket_route(websocket: WebSocket, token: str, room: str = "general"):
     """
     WebSocket endpoint for real-time chat.
-    
-    Args:
-        websocket: The WebSocket connection
-        username: The username of the connecting client
-        room: Optional room ID (defaults to 'general')
+    Token is passed as query param: /ws?token=XYZ&room=general
     """
-    await websocket_endpoint(websocket, username, room)
+    await websocket_endpoint(websocket, token, room)
 
 
-@app.websocket("/ws/{username}/{room_id}")
-async def websocket_room_route(websocket: WebSocket, username: str, room_id: str):
-    """
-    WebSocket endpoint for room-specific chat.
-    
-    Args:
-        websocket: The WebSocket connection
-        username: The username of the connecting client
-        room_id: The room to join
-    """
-    await websocket_endpoint(websocket, username, room_id)
+# Removed specific room route in favor of query param
+# Default route handles both cases via 'room' param
+
 
 
 if __name__ == "__main__":
