@@ -6,8 +6,9 @@ A real-time chat application backend built with FastAPI and WebSocket support, f
 
 - ⚡ **Real-time messaging** with WebSocket
 - 🛡️ **Toxicity Detection** - NLP-powered message analysis using Detoxify
-- 🏠 **Room-based chat** - Join different chat rooms
-- 📡 **REST API** - Health checks and room management
+- 🏠 **Room-based chat** - Join different chat rooms with history
+- 📊 **Analytics** - View room statistics
+- 📡 **REST API** - Health checks, room management, and history retrieval
 - 🔒 **CORS enabled** - Secure cross-origin requests
 - 📚 **Auto-generated docs** - Swagger UI & ReDoc
 
@@ -131,7 +132,10 @@ Once the server is running, visit:
 | GET | `/health` | Health check |
 | GET | `/health/stats` | Server statistics (connections, rooms) |
 | GET | `/chat/rooms` | List all active rooms |
+| POST | `/chat/rooms` | Create a new room (Strict Mode) |
+| GET | `/chat/rooms/{room_id}/messages` | Get chat history for a room |
 | GET | `/chat/rooms/{room_id}/users` | Get users in a specific room |
+| GET | `/analytics/rooms/{room_id}` | Get analytics for a room |
 
 ### WebSocket Endpoints
 
@@ -143,6 +147,10 @@ Once the server is running, visit:
 ---
 
 ## Frontend Integration Guide
+
+> **Note**: For detailed integration instructions, please refer to:
+> - [**Frontend Integration Guide**](FRONTEND_INTEGRATION.md) - Comprehensive guide for Auth, API, and WebSockets.
+> - [**Frontend Changes**](FRONTEND_CHANGES.md) - Specific details on new Room and History features.
 
 This section provides step-by-step instructions for integrating the ChatShield backend with your frontend application.
 
