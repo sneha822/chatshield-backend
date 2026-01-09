@@ -46,11 +46,16 @@ async def websocket_endpoint(websocket: WebSocket, token: str, room_id: str = "g
         }
         await manager.broadcast_to_room(join_message, room_id)
     else:
-        # Optional: Just notify self or do nothing.
-        # Maybe send CURRENT users list to self so they know who is online?
-        # The frontend usually expects a user list.
-        # Let's send a sync message or just rely on 'users' endpoint.
-        pass
+        # Just notify about presence update (sync user list)
+        sync_message = {
+            "type": MessageType.SYNC.value,
+            "content": "", # No chat bubble
+            "sender": "System",
+            "timestamp": datetime.utcnow().isoformat(),
+            "room_id": room_id,
+            "users": manager.get_room_users(room_id)
+        }
+        await manager.broadcast_to_room(sync_message, room_id)
     
     try:
         while True:

@@ -15,6 +15,7 @@ class MessageType(str, Enum):
     LEAVE = "leave"
     ERROR = "error"
     DELETE = "delete"
+    SYNC = "sync"
 
 
 class Message(BaseModel):
