@@ -140,5 +140,43 @@ class ChatService:
                 logger.error(f"Error fetching messages for room {room_id}: {e}")
                 return []
 
+    async def delete_message(self, message_id: int, user_id: int) -> bool:
+        """
+        Delete a message if the user is the valid author.
+        
+        Args:
+            message_id: ID of the message to delete
+            user_id: ID of the user attempting deletion
+            
+        Returns:
+            True if deleted, False if not found or unauthorized
+        """
+        async with AsyncSessionLocal() as session:
+            try:
+                # Find the message
+                result = await session.execute(
+                    select(Message).where(Message.id == message_id)
+                )
+                message = result.scalar_one_or_none()
+                
+                if not message:
+                    return False
+                
+                # Check authorship
+                if message.sender_id != user_id:
+                    logger.warning(f"User {user_id} attempted to delete message {message_id} but is not the author")
+                    return False
+                
+                # Delete message
+                await session.delete(message)
+                await session.commit()
+                logger.info(f"Message {message_id} deleted by user {user_id}")
+                return True
+                
+            except Exception as e:
+                logger.error(f"Error deleting message {message_id}: {e}")
+                await session.rollback()
+                raise
+
 
 chat_service = ChatService()

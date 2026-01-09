@@ -1,11 +1,13 @@
 """Chat-related REST API endpoints."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List
 from pydantic import BaseModel
+from app.models.sql import User
 
 from ..websocket.manager import manager
 from ..services.chat import chat_service
+from ..core.deps import get_current_user
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -89,3 +91,26 @@ async def get_room_messages(room_id: str, limit: int = 50):
             } for m in messages
         ]
     }
+
+
+@router.delete("/messages/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_message(
+    message_id: int, 
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Delete a specific message.
+    Only the author of the message can delete it.
+    """
+    success = await chat_service.delete_message(message_id, current_user.id)
+    
+    if not success:
+        # We use 403 for unauthorized/not found to avoid leaking existence, 
+        # or 404/403 split if we checked existence separately.
+        # chat_service.delete_message returns False for both mismatch and not found currently to be safe.
+        # For better UX, we might want to know why, but security-wise this is okay.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Message not found or you are not the author"
+        )
+
