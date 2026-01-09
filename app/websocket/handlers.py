@@ -31,16 +31,26 @@ async def websocket_endpoint(websocket: WebSocket, token: str, room_id: str = "g
     # Connect the user
     await manager.connect(websocket, username, room_id)
     
-    # Notify room about new user
-    join_message = {
-        "type": MessageType.JOIN.value,
-        "content": f"{username} has joined the chat",
-        "sender": "System",
-        "timestamp": datetime.utcnow().isoformat(),
-        "room_id": room_id,
-        "users": manager.get_room_users(room_id)
-    }
-    await manager.broadcast_to_room(join_message, room_id)
+    # Check if user is new to the room
+    is_new_member = await chat_service.join_room(username, room_id)
+    
+    if is_new_member:
+        # Notify room about new user if they just joined (persisted)
+        join_message = {
+            "type": MessageType.JOIN.value,
+            "content": f"{username} has joined the chat",
+            "sender": "System",
+            "timestamp": datetime.utcnow().isoformat(),
+            "room_id": room_id,
+            "users": manager.get_room_users(room_id)
+        }
+        await manager.broadcast_to_room(join_message, room_id)
+    else:
+        # Optional: Just notify self or do nothing.
+        # Maybe send CURRENT users list to self so they know who is online?
+        # The frontend usually expects a user list.
+        # Let's send a sync message or just rely on 'users' endpoint.
+        pass
     
     try:
         while True:

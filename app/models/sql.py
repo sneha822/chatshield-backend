@@ -2,9 +2,19 @@
 
 from typing import List, Optional
 from datetime import datetime
-from sqlalchemy import String, Integer, DateTime, ForeignKey, Float, JSON
+from sqlalchemy import String, Integer, DateTime, ForeignKey, Float, JSON, Table, Column
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
+
+
+# Association table for User <-> Room many-to-many relationship
+user_rooms = Table(
+    "user_rooms",
+    Base.metadata,
+    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True),
+    Column("room_id", String, ForeignKey("rooms.id"), primary_key=True),
+    Column("joined_at", DateTime, default=datetime.utcnow)
+)
 
 
 class User(Base):
@@ -18,6 +28,11 @@ class User(Base):
 
     # Relationships
     messages: Mapped[List["Message"]] = relationship(back_populates="sender")
+    rooms: Mapped[List["Room"]] = relationship(
+        secondary=user_rooms, 
+        back_populates="users",
+        lazy="selectin" # Eager load rooms for user
+    )
 
 
 class Room(Base):
@@ -30,6 +45,11 @@ class Room(Base):
 
     # Relationships
     messages: Mapped[List["Message"]] = relationship(back_populates="room")
+    users: Mapped[List["User"]] = relationship(
+        secondary=user_rooms, 
+        back_populates="rooms",
+        lazy="selectin"
+    )
 
 
 class Message(Base):

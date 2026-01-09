@@ -31,6 +31,25 @@ async def get_rooms():
     return {"rooms": rooms_info}
 
 
+@router.get("/my-rooms")
+async def get_my_rooms(current_user: User = Depends(get_current_user)):
+    """
+    Get list of rooms the current user has joined.
+    """
+    rooms = await chat_service.get_user_rooms(current_user.username)
+    
+    return {
+        "count": len(rooms),
+        "rooms": [
+            {
+                "id": r.id,
+                "name": r.name,
+                "created_at": r.created_at
+            } for r in rooms
+        ]
+    }
+
+
 @router.get("/rooms/{room_id}/users")
 async def get_room_users(room_id: str) -> dict:
     """
