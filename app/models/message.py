@@ -14,6 +14,7 @@ class MessageType(str, Enum):
     JOIN = "join"
     LEAVE = "leave"
     ERROR = "error"
+    DELETE = "delete"
 
 
 class Message(BaseModel):

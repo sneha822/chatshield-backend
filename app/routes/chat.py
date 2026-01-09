@@ -121,15 +121,28 @@ async def delete_message(
     Delete a specific message.
     Only the author of the message can delete it.
     """
-    success = await chat_service.delete_message(message_id, current_user.id)
+    room_id = await chat_service.delete_message(message_id, current_user.id)
     
-    if not success:
+    if not room_id:
         # We use 403 for unauthorized/not found to avoid leaking existence, 
         # or 404/403 split if we checked existence separately.
-        # chat_service.delete_message returns False for both mismatch and not found currently to be safe.
+        # chat_service.delete_message returns None for both mismatch and not found currently to be safe.
         # For better UX, we might want to know why, but security-wise this is okay.
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Message not found or you are not the author"
         )
+        
+    # Broadcast deletion to the room via WebSocket
+    from app.models.message import MessageType
+    from datetime import datetime
+    
+    delete_event = {
+        "type": MessageType.DELETE.value,
+        "message_id": message_id,
+        "room_id": room_id,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    await manager.broadcast_to_room(delete_event, room_id)
 

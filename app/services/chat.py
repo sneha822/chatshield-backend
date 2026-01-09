@@ -3,7 +3,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
-from typing import List
+from typing import List, Optional
 from app.models.sql import User, Room, Message
 from app.database import AsyncSessionLocal
 import logging
@@ -140,7 +140,7 @@ class ChatService:
                 logger.error(f"Error fetching messages for room {room_id}: {e}")
                 return []
 
-    async def delete_message(self, message_id: int, user_id: int) -> bool:
+    async def delete_message(self, message_id: int, user_id: int) -> Optional[str]:
         """
         Delete a message if the user is the valid author.
         
@@ -149,7 +149,7 @@ class ChatService:
             user_id: ID of the user attempting deletion
             
         Returns:
-            True if deleted, False if not found or unauthorized
+            room_id of the deleted message if successful, None otherwise
         """
         async with AsyncSessionLocal() as session:
             try:
@@ -160,18 +160,20 @@ class ChatService:
                 message = result.scalar_one_or_none()
                 
                 if not message:
-                    return False
+                    return None
                 
                 # Check authorship
                 if message.sender_id != user_id:
                     logger.warning(f"User {user_id} attempted to delete message {message_id} but is not the author")
-                    return False
+                    return None
+                
+                room_id = message.room_id
                 
                 # Delete message
                 await session.delete(message)
                 await session.commit()
                 logger.info(f"Message {message_id} deleted by user {user_id}")
-                return True
+                return room_id
                 
             except Exception as e:
                 logger.error(f"Error deleting message {message_id}: {e}")
