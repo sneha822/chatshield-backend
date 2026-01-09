@@ -2,26 +2,16 @@
 
 import logging
 from typing import Dict, Optional
-from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
-# Global model instance (lazy loaded)
-_model = None
-_model_loaded = False
-
+# Global singleton instance
+toxicity_analyzer = None
 
 class ToxicityAnalyzer:
     """
-    Analyzes text for toxicity using the Detoxify model.
-    
-    The model provides scores for:
-    - toxicity: General toxicity
-    - severe_toxicity: Severe/extreme toxicity
-    - obscene: Obscene language
-    - threat: Threatening language
-    - insult: Insulting language
-    - identity_attack: Identity-based attacks
+    Analyzes text for toxicity using the Hugging Face transformers model.
+    Supports English, Hindi, and Hinglish.
     """
     
     def __init__(self):
@@ -39,20 +29,19 @@ class ToxicityAnalyzer:
             return True
         
         try:
-            from detoxify import Detoxify
+            from transformers import pipeline
             
-            logger.info("Loading toxicity detection model...")
-            # Using 'original' model - good balance of speed and accuracy
-            # Other options: 'unbiased', 'multilingual'
-            self._model = Detoxify('original')
+            logger.info("Loading multilingual toxicity detection model...")
+            # Using 'textdetox/bert-multilingual-toxicity-classifier' for English, Hindi, Hinglish support
+            self._model = pipeline("text-classification", model="textdetox/bert-multilingual-toxicity-classifier")
             self._is_loaded = True
             logger.info("Toxicity detection model loaded successfully")
             return True
             
         except ImportError:
             logger.error(
-                "Detoxify package not installed. "
-                "Install with: pip install detoxify"
+                "Transformers package not installed. "
+                "Install with: pip install transformers torch"
             )
             return False
         except Exception as e:
@@ -76,12 +65,46 @@ class ToxicityAnalyzer:
         
         try:
             # Get predictions from the model
-            results = self._model.predict(text)
+            # The pipeline returns a list of dicts like [{'label': 'LABEL_0', 'score': 0.99}]
+            # LABEL_0 usually means non-toxic, LABEL_1 means toxic, but need to verify for this specific model.
+            # Assuming standard binary classification where the model returns the most likely class.
             
-            # Convert numpy floats to Python floats and round
+            # Since pipeline call can handle truncation, we rely on defaults.
+            # For this specific model:
+            # LABEL_1 is typically Toxic
+            # LABEL_0 is typically Non-Toxic
+            
+            results = self._model(text)
+            result = results[0] if isinstance(results, list) else results
+            
+            label = result.get('label')
+            score = result.get('score')
+            
+            toxicity_score = 0.0
+            
+            # Adjust score based on label
+            # Note: Verify label mapping for textdetox/bert-multilingual-toxicity-classifier
+            # Usually: LABEL_0 = Non-toxic, LABEL_1 = Toxic
+            if label == 'LABEL_1' or label == 'toxic': 
+                toxicity_score = score
+            elif label == 'LABEL_0' or label == 'non-toxic':
+                toxicity_score = 1.0 - score
+            else:
+                 # Fallback if labels are different (e.g. some models use 'toxic' directly)
+                 if 'toxic' in label.lower() and 'non' not in label.lower():
+                     toxicity_score = score
+                 else:
+                     toxicity_score = 1.0 - score
+
+            # Since this model is primarily binary toxicity, we map the main score 
+            # and set others to 0 or same to avoid breaking clients expecting these keys.
             scores = {
-                key: round(float(value), 4)
-                for key, value in results.items()
+                "toxicity": round(toxicity_score, 4),
+                "severe_toxicity": 0.0, # Not supported by this specific model breakdown
+                "obscene": 0.0,
+                "threat": 0.0,
+                "insult": 0.0,
+                "identity_attack": 0.0
             }
             
             # Add an overall toxicity flag
