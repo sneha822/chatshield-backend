@@ -33,7 +33,7 @@ class ToxicityAnalyzer:
             
             logger.info("Loading multilingual toxicity detection model...")
             # Using 'textdetox/bert-multilingual-toxicity-classifier' for English, Hindi, Hinglish support
-            self._model = pipeline("text-classification", model="./model_export")
+            self._model = pipeline("text-classification", model="./model")
             self._is_loaded = True
             logger.info("Toxicity detection model loaded successfully")
             return True
