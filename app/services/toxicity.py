@@ -32,7 +32,7 @@ class ToxicityAnalyzer:
             from transformers import pipeline
             
             logger.info("Loading multilingual toxicity detection model...")
-            # Using 'textdetox/bert-multilingual-toxicity-classifier' for English, Hindi, Hinglish support
+            # Using local model folder. Ensure 'textdetox/xlmr-large-toxicity-classifier' files are in ./model
             self._model = pipeline("text-classification", model="./model")
             self._is_loaded = True
             logger.info("Toxicity detection model loaded successfully")

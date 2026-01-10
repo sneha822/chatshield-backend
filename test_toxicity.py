@@ -16,16 +16,25 @@ def test_toxicity():
     # Test cases
     texts = [
         ("Eng Toxic", "You are an idiot"),
-        ("Eng Toxic 2", "I hate you, you should die"),
+        ("Eng Toxic 2", "I'll slap you"),
+        ("Eng Toxic 3", "I will kick you hard"),
+        ("Eng Toxic 4", "I am going to hit you"),
         ("Eng Safe", "Hello friend, how are you?"),
+        ("Eng Safe 2", "Let's kick off the meeting"),
+        
         ("Hindi Toxic", "तुम बेवकूफ हो"),
         ("Hindi Toxic 2", "तेरी हिम्मत कैसे हुई"),
+        ("Hindi Toxic 3", "मैं तुम्हें मार दूंगा"),
         ("Hindi Safe", "नमस्ते दोस्त"),
+        ("Hindi Safe 2", "आज का दिन अच्छा है"),
+
         ("Hinglish Toxic", "Tera dimag kharab hai"),
         ("Hinglish Toxic 2", "Tu pagal hai kya"),
         ("Hinglish Toxic 3", "Sale kutte"),
+        ("Hinglish Toxic 4", "pagal admi"),
         ("Hinglish Safe", "Hello bhai, kaise ho?"),
-        ("Hinglish Safe 2", "Aaj ka mausam accha hai")
+        ("Hinglish Safe 2", "Aaj ka mausam accha hai"),
+        ("Hinglish Safe 3", "Main ghar ja raha hun")
     ]
 
     print("\nCorrectness Check:")
