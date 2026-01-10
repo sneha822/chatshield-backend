@@ -114,7 +114,34 @@ chatshield-backend/
 
    The server will start at `http://localhost:8000`
 
-   > ⚠️ **Note:** First startup may take 1-2 minutes as the toxicity model downloads (~400MB)
+   > ⚠️ **Note:** First startup may take 1-2 minutes as the toxicity model downloads (~700MB)
+   >
+   > 💡 **Tip:** To skip the download, see [Sharing the Model](#sharing-the-toxicity-model) below
+
+### Sharing the Toxicity Model
+
+If you've already downloaded the model and want to share it with teammates (or vice versa):
+
+**To Export Your Model:**
+```bash
+python export_model.py
+```
+This creates a `model_export/` folder (~700MB). Compress it and share it via Google Drive, USB, etc.
+
+**To Use a Shared Model:**
+
+Option 1 (Recommended): Extract the `model_export/` folder to your project root, then modify `app/services/toxicity.py` line 36:
+```python
+# Change from:
+self._model = pipeline("text-classification", model="textdetox/bert-multilingual-toxicity-classifier")
+
+# To:
+self._model = pipeline("text-classification", model="./model_export")
+```
+
+Option 2: Place the model in your Hugging Face cache directory (see `model_export/SHARED_MODEL_README.txt` for details)
+
+> ⚠️ **Note:** DO NOT commit the `model_export/` folder to GitHub - it's already in `.gitignore` due to file size limits (GitHub max is 100MB)
 
 ---
 

@@ -101,6 +101,9 @@ logs/
 *.sqlite3
 *.db
 
+# ML Models (too large for GitHub)
+model_export/
+
 # Secrets
 .env.local
 .env.*.local
