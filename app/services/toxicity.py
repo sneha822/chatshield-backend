@@ -14,6 +14,10 @@ class ToxicityAnalyzer:
     Supports English, Hindi, and Hinglish.
     """
     
+    # Toggle to enable/disable toxicity detection
+    # If False, the model is bypassed and returns 0.0 scores (safe)
+    ENABLE_TOXICITY_CHECK = True
+    
     def __init__(self):
         self._model = None
         self._is_loaded = False
@@ -58,6 +62,18 @@ class ToxicityAnalyzer:
         Returns:
             Dictionary with toxicity scores (0.0 to 1.0)
         """
+        if not self.ENABLE_TOXICITY_CHECK:
+            return {
+                "toxicity": 0.0,
+                "severe_toxicity": 0.0,
+                "obscene": 0.0,
+                "threat": 0.0,
+                "insult": 0.0,
+                "identity_attack": 0.0,
+                "is_toxic": False,
+                "toxicity_level": "safe"
+            }
+
         if not self._is_loaded:
             if not self.load_model():
                 # Return default scores if model isn't available

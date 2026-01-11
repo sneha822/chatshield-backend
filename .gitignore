@@ -104,6 +104,7 @@ logs/
 # ML Models (too large for GitHub)
 model_export/
 model/
+test-model-*/
 
 # Secrets
 .env.local
