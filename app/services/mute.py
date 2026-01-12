@@ -18,7 +18,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Configuration constants
-TOXIC_THRESHOLD = 10  # Number of toxic messages before mute
+TOXIC_THRESHOLD = 5  # Number of toxic messages before mute
 MUTE_DURATION_MINUTES = 5  # Duration of mute in minutes
 
 
