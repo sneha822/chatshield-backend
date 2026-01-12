@@ -1,12 +1,13 @@
 """Chat-related REST API endpoints."""
 
 from fastapi import APIRouter, HTTPException, status, Depends
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 from app.models.sql import User
 
 from ..websocket.manager import manager
 from ..services.chat import chat_service
+from ..services.mute import mute_service
 from ..core.deps import get_current_user
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
@@ -145,4 +146,55 @@ async def delete_message(
     }
     
     await manager.broadcast_to_room(delete_event, room_id)
+
+
+@router.get("/mute-status/{room_id}")
+async def get_mute_status(
+    room_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get the current user's mute status in a specific room.
+    
+    Returns:
+        Mute status info including:
+        - is_muted: Whether user is currently muted
+        - mute_expires_at: When the mute expires (UTC ISO timestamp)
+        - remaining_seconds: Seconds until unmute
+        - warning_count: Total warnings received
+        - consecutive_toxic_count: Current consecutive toxic messages
+        - total_mute_count: How many times user has been muted in this room
+    """
+    mute_status = await mute_service.check_mute_status(
+        username=current_user.username,
+        room_id=room_id
+    )
+    
+    return {
+        "username": current_user.username,
+        "room_id": room_id,
+        **mute_status
+    }
+
+
+@router.get("/mute-stats")
+async def get_mute_stats(
+    room_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get the current user's mute/warning statistics.
+    
+    If room_id is provided, returns stats for that specific room.
+    Otherwise, returns aggregate stats across all rooms.
+    
+    Returns:
+        User statistics including warnings and mutes
+    """
+    stats = await mute_service.get_user_stats(
+        username=current_user.username,
+        room_id=room_id
+    )
+    
+    return stats
 

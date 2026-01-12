@@ -6,6 +6,8 @@ A real-time chat application backend built with FastAPI and WebSocket support, f
 
 - ⚡ **Real-time messaging** with WebSocket
 - 🛡️ **Toxicity Detection** - NLP-powered message analysis using Detoxify
+- 🔇 **Auto-Mute System** - Users get muted for 5 minutes after 5 consecutive toxic messages (per room)
+- ⚠️ **Warning System** - Real-time warnings for toxic messages with countdown to mute
 - 🏠 **Room-based chat** - Join different chat rooms with history
 - 📊 **Analytics** - View room statistics
 - 📡 **REST API** - Health checks, room management, and history retrieval

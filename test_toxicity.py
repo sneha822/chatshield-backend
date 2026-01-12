@@ -15,26 +15,30 @@ def test_toxicity():
 
     # Test cases
     texts = [
-        ("Eng Toxic", "You are an idiot"),
-        ("Eng Toxic 2", "I'll slap you"),
-        ("Eng Toxic 3", "I will kick you hard"),
-        ("Eng Toxic 4", "I am going to hit you"),
-        ("Eng Safe", "Hello friend, how are you?"),
-        ("Eng Safe 2", "Let's kick off the meeting"),
+        # Explicit Toxic
+        ("Toxic 1", "You are an idiot and a loser"),
+        ("Toxic 2", "I will kill you"),
+        ("Toxic 3", "I hope you die"),
         
-        ("Hindi Toxic", "तुम बेवकूफ हो"),
-        ("Hindi Toxic 2", "तेरी हिम्मत कैसे हुई"),
-        ("Hindi Toxic 3", "मैं तुम्हें मार दूंगा"),
-        ("Hindi Safe", "नमस्ते दोस्त"),
-        ("Hindi Safe 2", "आज का दिन अच्छा है"),
+        # Subtly Toxic / Insults
+        ("Subtle 1", "You are not very smart, are you?"),
+        ("Subtle 2", "Did your brain take a vacation?"),
 
-        ("Hinglish Toxic", "Tera dimag kharab hai"),
-        ("Hinglish Toxic 2", "Tu pagal hai kya"),
-        ("Hinglish Toxic 3", "Sale kutte"),
-        ("Hinglish Toxic 4", "pagal admi"),
-        ("Hinglish Safe", "Hello bhai, kaise ho?"),
-        ("Hinglish Safe 2", "Aaj ka mausam accha hai"),
-        ("Hinglish Safe 3", "Main ghar ja raha hun")
+        # Identity Attack
+        ("Identity 1", "Women are inferior"),
+        ("Identity 2", "Go back to your country"),
+
+        # Safe but negative sounding
+        ("Safe Negative 1", "This movie was terrible"),
+        ("Safe Negative 2", "I hate waking up early"),
+        ("Safe Negative 3", "The weather is awful today"),
+
+        # Safe Contextual / Tricky
+        ("Tricky 1", "You are killing it!"),  # Slang for doing well
+        ("Tricky 2", "I am dying of laughter"), # Metaphor
+        ("Tricky 3", "That trick was sick!"), # Slang for cool
+        ("Tricky 4", "Don't be a stranger"),
+        ("Tricky 5", "You are not dumb"),
     ]
 
     print("\nCorrectness Check:")

@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 from datetime import datetime
-from sqlalchemy import String, Integer, DateTime, ForeignKey, Float, JSON, Table, Column
+from sqlalchemy import String, Integer, DateTime, ForeignKey, Float, JSON, Table, Column, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -33,6 +33,7 @@ class User(Base):
         back_populates="users",
         lazy="selectin" # Eager load rooms for user
     )
+    mutes: Mapped[List["UserMute"]] = relationship(back_populates="user")
 
 
 class Room(Base):
@@ -50,6 +51,7 @@ class Room(Base):
         back_populates="rooms",
         lazy="selectin"
     )
+    mutes: Mapped[List["UserMute"]] = relationship(back_populates="room")
 
 
 class Message(Base):
@@ -70,3 +72,39 @@ class Message(Base):
     # Relationships
     sender: Mapped["User"] = relationship(back_populates="messages")
     room: Mapped["Room"] = relationship(back_populates="messages")
+
+
+class UserMute(Base):
+    """
+    Model to track user mutes and warnings per room.
+    
+    When a user sends 5 consecutive toxic messages in a room,
+    they get muted for 5 minutes. All times stored in UTC.
+    """
+    __tablename__ = "user_mutes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    
+    # Foreign keys
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), index=True)
+    room_id: Mapped[str] = mapped_column(String, ForeignKey("rooms.id"), index=True)
+    
+    # Warning tracking
+    warning_count: Mapped[int] = mapped_column(Integer, default=0)
+    consecutive_toxic_count: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # Mute status
+    is_muted: Mapped[bool] = mapped_column(Boolean, default=False)
+    muted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    mute_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    
+    # Tracking timestamps (all UTC)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Total mute count (how many times user has been muted in this room)
+    total_mute_count: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # Relationships
+    user: Mapped["User"] = relationship(back_populates="mutes")
+    room: Mapped["Room"] = relationship(back_populates="mutes")
