@@ -33,6 +33,7 @@ class User(Base):
         back_populates="users",
         lazy="selectin" # Eager load rooms for user
     )
+    created_rooms: Mapped[List["Room"]] = relationship(back_populates="creator", foreign_keys="Room.creator_id")
     mutes: Mapped[List["UserMute"]] = relationship(back_populates="user")
 
 
@@ -43,8 +44,12 @@ class Room(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True)  # Using slug/name as ID
     name: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    
+    # Creator of the room
+    creator_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
 
     # Relationships
+    creator: Mapped[Optional["User"]] = relationship(back_populates="created_rooms", foreign_keys=[creator_id])
     messages: Mapped[List["Message"]] = relationship(back_populates="room")
     users: Mapped[List["User"]] = relationship(
         secondary=user_rooms, 

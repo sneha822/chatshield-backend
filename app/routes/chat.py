@@ -45,9 +45,33 @@ async def get_my_rooms(current_user: User = Depends(get_current_user)):
             {
                 "id": r.id,
                 "name": r.name,
-                "created_at": r.created_at
+                "created_at": r.created_at,
+                "creator_id": r.creator_id,
+                "is_creator": r.creator_id == current_user.id
             } for r in rooms
         ]
+    }
+
+
+@router.get("/rooms/{room_id}")
+async def get_room(
+    room_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get room details including whether current user is the creator.
+    """
+    room = await chat_service.get_room(room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    
+    return {
+        "id": room.id,
+        "name": room.name,
+        "created_at": room.created_at,
+        "creator_id": room.creator_id,
+        "creator_username": room.creator.username if room.creator else None,
+        "is_creator": room.creator_id == current_user.id
     }
 
 
@@ -77,14 +101,23 @@ class CreateRoomRequest(BaseModel):
 
 
 @router.post("/rooms", status_code=status.HTTP_201_CREATED)
-async def create_room(request: CreateRoomRequest):
+async def create_room(
+    request: CreateRoomRequest,
+    current_user: User = Depends(get_current_user)
+):
     """
     Create a new chat room.
     Fails if room_id already exists.
     """
     try:
-        room = await chat_service.create_room(request.room_id, request.name)
-        return {"id": room.id, "name": room.name, "created_at": room.created_at}
+        room = await chat_service.create_room(request.room_id, request.name, current_user.id)
+        return {
+            "id": room.id,
+            "name": room.name,
+            "created_at": room.created_at,
+            "creator_id": room.creator_id,
+            "is_creator": True
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
@@ -197,4 +230,85 @@ async def get_mute_stats(
     )
     
     return stats
+
+
+@router.get("/rooms/{room_id}/muted-users")
+async def get_muted_users(
+    room_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all currently muted users in a room.
+    Only the room creator can access this endpoint.
+    """
+    # Check if room exists and user is creator
+    room = await chat_service.get_room(room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    
+    if room.creator_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the room creator can view muted users"
+        )
+    
+    muted_users = await mute_service.get_muted_users(room_id)
+    
+    return {
+        "room_id": room_id,
+        "count": len(muted_users),
+        "muted_users": muted_users
+    }
+
+
+@router.post("/rooms/{room_id}/unmute/{username}")
+async def unmute_user(
+    room_id: str,
+    username: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Manually unmute a user in a room.
+    Only the room creator can unmute users.
+    """
+    # Check if room exists and user is creator
+    room = await chat_service.get_room(room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    
+    if room.creator_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the room creator can unmute users"
+        )
+    
+    success = await mute_service.unmute_user(username, room_id)
+    
+    if not success:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found or not currently muted"
+        )
+    
+    # Broadcast unmute to the room
+    from app.models.message import MessageType
+    from datetime import datetime
+    
+    unmute_event = {
+        "type": MessageType.UNMUTED.value,
+        "content": f"{username} has been unmuted by the room admin.",
+        "sender": "System",
+        "room_id": room_id,
+        "username": username,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    await manager.broadcast_to_room(unmute_event, room_id)
+    
+    return {
+        "success": True,
+        "message": f"User {username} has been unmuted",
+        "room_id": room_id,
+        "username": username
+    }
 

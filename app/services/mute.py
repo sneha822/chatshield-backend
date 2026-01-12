@@ -410,6 +410,103 @@ class MuteService:
                 logger.error(f"Error getting user stats for {username}: {e}")
                 return {"error": str(e)}
 
+    async def get_muted_users(self, room_id: str) -> list:
+        """
+        Get all currently muted users in a room.
+        
+        Args:
+            room_id: The room ID
+            
+        Returns:
+            List of muted users with their mute info
+        """
+        async with AsyncSessionLocal() as session:
+            try:
+                now = datetime.utcnow()
+                
+                # Get all muted users in this room
+                result = await session.execute(
+                    select(UserMute, User).join(User).where(
+                        and_(
+                            UserMute.room_id == room_id,
+                            UserMute.is_muted == True,
+                            UserMute.mute_expires_at > now
+                        )
+                    )
+                )
+                muted_records = result.all()
+                
+                muted_users = []
+                for user_mute, user in muted_records:
+                    remaining = (user_mute.mute_expires_at - now).total_seconds()
+                    muted_users.append({
+                        "username": user.username,
+                        "user_id": user.id,
+                        "muted_at": user_mute.muted_at.isoformat() if user_mute.muted_at else None,
+                        "mute_expires_at": user_mute.mute_expires_at.isoformat(),
+                        "remaining_seconds": max(0, int(remaining)),
+                        "warning_count": user_mute.warning_count,
+                        "total_mute_count": user_mute.total_mute_count
+                    })
+                
+                return muted_users
+                
+            except Exception as e:
+                logger.error(f"Error getting muted users for room {room_id}: {e}")
+                return []
+
+    async def unmute_user(self, username: str, room_id: str) -> bool:
+        """
+        Manually unmute a user in a room.
+        
+        Args:
+            username: The username to unmute
+            room_id: The room ID
+            
+        Returns:
+            True if user was unmuted, False otherwise
+        """
+        async with AsyncSessionLocal() as session:
+            try:
+                # Get user
+                user_result = await session.execute(
+                    select(User).where(User.username == username)
+                )
+                user = user_result.scalar_one_or_none()
+                
+                if not user:
+                    logger.warning(f"User {username} not found for unmute")
+                    return False
+                
+                # Get UserMute record
+                mute_result = await session.execute(
+                    select(UserMute).where(
+                        and_(
+                            UserMute.user_id == user.id,
+                            UserMute.room_id == room_id
+                        )
+                    )
+                )
+                user_mute = mute_result.scalar_one_or_none()
+                
+                if not user_mute or not user_mute.is_muted:
+                    return False
+                
+                # Unmute the user
+                user_mute.is_muted = False
+                user_mute.muted_at = None
+                user_mute.mute_expires_at = None
+                user_mute.consecutive_toxic_count = 0
+                await session.commit()
+                
+                logger.info(f"Manually unmuted {username} in room {room_id}")
+                return True
+                
+            except Exception as e:
+                logger.error(f"Error unmuting {username} in {room_id}: {e}")
+                await session.rollback()
+                return False
+
 
 # Global singleton instance
 mute_service = MuteService()

@@ -36,6 +36,20 @@ class ChatService:
                 logger.error(f"Error getting/creating user {username}: {e}")
                 raise
 
+    async def get_room(self, room_id: str) -> Optional[Room]:
+        """Get a room by ID."""
+        async with AsyncSessionLocal() as session:
+            try:
+                result = await session.execute(
+                    select(Room)
+                    .where(Room.id == room_id)
+                    .options(selectinload(Room.creator))
+                )
+                return result.scalar_one_or_none()
+            except Exception as e:
+                logger.error(f"Error getting room {room_id}: {e}")
+                return None
+
     async def get_or_create_room(self, room_id: str) -> Room:
         """Get existing room or create a new one."""
         async with AsyncSessionLocal() as session:
@@ -101,7 +115,7 @@ class ChatService:
 
 
 
-    async def create_room(self, room_id: str, name: str) -> Room:
+    async def create_room(self, room_id: str, name: str, creator_id: int = None) -> Room:
         """Create a new room, error if exists."""
         async with AsyncSessionLocal() as session:
             try:
@@ -110,12 +124,12 @@ class ChatService:
                 if result.scalar_one_or_none():
                     raise ValueError(f"Room '{room_id}' already exists")
                 
-                # Create new room
-                room = Room(id=room_id, name=name)
+                # Create new room with creator
+                room = Room(id=room_id, name=name, creator_id=creator_id)
                 session.add(room)
                 await session.commit()
                 await session.refresh(room)
-                logger.info(f"Created new room: {room_id}")
+                logger.info(f"Created new room: {room_id} by user {creator_id}")
                 return room
             except Exception as e:
                 logger.error(f"Error creating room {room_id}: {e}")
